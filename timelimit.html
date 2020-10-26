@@ -1,0 +1,714 @@
+<!doctype html>
+<html>
+<head>
+	<title>EggCatcher Game</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+	<meta http-equiv="cache-control" content="max-age=0" />
+	<meta http-equiv="cache-control" content="no-cache" />
+	<meta http-equiv="expires" content="0" />
+	<meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
+	<meta http-equiv="pragma" content="no-cache" />
+	<script type="text/javascript" src="helperMethods.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-database.js"></script>
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+<script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-analytics.js"></script>
+	<script type="text/javascript">
+//This side of the editor is the code that controls your game
+//Anything after two slashes (like this line) is ignored by the game
+ // Your web app's Firebase configuration
+  var firebaseConfig = {
+    apiKey: "AIzaSyD-7IUeYHo8fk5xUMjTzJWnTUeTSrcyBZQ",
+    authDomain: "java0101-ardy.firebaseapp.com",
+    databaseURL: "https://java0101-ardy.firebaseio.com",
+    projectId: "java0101-ardy",
+    storageBucket: "java0101-ardy.appspot.com",
+    messagingSenderId: "651141459911",
+    appId: "1:651141459911:web:f321cdc4d04328b2d133e2",
+    measurementId: "G-TSR2HXCHST"
+  }
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  firebase.analytics();
+var fbase = firebase.database();
+var froom;
+var mystat;
+var tplayer;
+var oplayer;
+var scvalue;
+var pname;
+var pname2;
+var time;
+var timerId ;
+
+var canvasWidth; //browser 270; samsung a50 405 ; iphone 395
+var canvasHeight; //browser 420; samsung a50 750 ; iphone 630
+var startingLives = 3;
+var numberOfEnemies = 5;
+var numberOfBadEgg = 2;
+var numberOfXtra = 1;
+var enemyStartSpeed = 2.5;
+var numberOfCatcherPositions = 3; //must match the number of positions above
+var enemySpeedIncrease = 0.02; //How much the enemies speed up
+var catcherVerticalPosition = canvasHeight*23/100;
+var speedIncreasePoints = 0.02; // Increase game speed ever 5 points
+var maxEnemySpacing = 1000; //Max height above top of screen they are placed
+var maxRottenSpacing = 2000; //Max height above top of screen they are placed
+var maxLifeSpacing = 2500; //Max height above top of screen they are placed
+
+var frameRate = 100; //Frames per second
+var score = 0;
+var score2 = 0;
+var canvas;
+var enemySpeed; //Current speed
+var lives;
+var catcher;
+var catcherPositions; // will hold x coordinates for each catcher position
+var enemies;
+var badegg; //for rotten egg
+var xtra; //extra life
+var lifeContainer; //A container to show the player's lives
+var lifeImage;
+var scoreContainer; //Container for displaying score
+var gameState = "controls"; //Where the player is in the game
+
+if(screen.width>screen.height){
+    //browser
+    canvasWidth = screen.width/3.5; 
+    canvasHeight = screen.height/1.20;
+}else if(screen.width<screen.height){
+    //mobile
+    canvasWidth = screen.width; 
+    canvasHeight = screen.height/1.2;
+}
+
+//Initialise game when window is fully loaded
+window.onload = function(){
+    
+    var url = document.location.href,
+        params = url.split('?')[1].split('&'),
+        data = {}, tmp;
+    for (var i = 0, l = params.length; i < l; i++) {
+         tmp = params[i].split('=');
+         data[tmp[0]] = tmp[1];
+    }
+    playering(data.name);
+    }
+//for keyboard
+document.addEventListener('keydown', keyDownHandler, false);
+document.addEventListener('keyup', keyUpHandler, false);
+    
+var rightPressed = false;
+var leftPressed = false;
+var upPressed = false;
+var downPressed = false;
+        
+function keyDownHandler(event) {
+        if(event.keyCode == 39) {
+            if(catcher.position < numberOfCatcherPositions-1){
+		      catcher.position += 1;
+            }
+            rightPressed = true;
+        }
+        else if(event.keyCode == 37) {
+            if(catcher.position > 0){
+                catcher.position -= 1;
+	       }
+            leftPressed = true;
+        }
+        if(event.keyCode == 40) {
+            downPressed = true;
+        }
+        else if(event.keyCode == 38) {
+            upPressed = true;
+        }
+    }
+function keyUpHandler(event) {
+        if(event.keyCode == 39) {
+            rightPressed = false;
+        }
+        else if(event.keyCode == 37) {
+            leftPressed = false;
+        }
+        if(event.keyCode == 40) {
+            downPressed = false;
+        }
+        else if(event.keyCode == 38) {
+            upPressed = false;
+        }
+}
+
+// -------------- Below here the proper game code start --------------
+var playering = function(rn){
+froom = fbase.ref('room').child(rn);
+console.log("playering "+rn);
+    //sementara di disable dlu utk kepentingan design
+    try{
+        froom.once('value').then(function(snapshot){
+        var p1 = snapshot.child('p1status').val(); // true
+        var p2 = snapshot.child('p2status').val();
+        if(p1 == "" || p1 == null){
+            froom.child("p1status").set("in");
+            froom.child("roomStat").set("1");
+            mystat = "1";
+            tplayer = "Player1";
+            oplayer = "Player2";
+            console.log("disini "+mystat);
+            pname = prompt(tplayer+" please input your name:");
+            froom.child("p1name").set(pname);
+        }else if(p2 == "" || p2 == null){
+            froom.child("p2status").set("in");
+            froom.child("roomStat").set("2");
+            mystat = "2";
+            tplayer = "Player2";
+            oplayer = "Player1";
+            console.log("disini "+mystat);
+            pname = prompt(tplayer+" please input your name:");
+            console.log(time+"ini timenya");
+        froom.child("p2name").set(pname);
+        }else{
+        alert("error");
+        window.location.href="index.html"
+        }
+        time = snapshot.child("timeset").val();
+        tplayer = tplayer+"("+pname+")";
+        console.log(time+" ini timenya");
+        });
+    initialise();
+    }catch(err){
+    console.log(err);
+    }
+    
+}
+
+//Create and initialise all game components
+var initialise = function(){
+
+	document.title = "EggCatcher Game"; //The title of your game at the top of the browser
+    //Initialise important variables for drawing
+	canvas = document.getElementById("main");
+	canvas.innerHTML = ""; //Clear out anything already in the canvas
+	canvas.innerHTML = "";
+	canvas.style.width = canvasWidth + 'px';
+	canvas.style.height = canvasHeight + 'px';
+    
+    //Set the background
+	canvas.style.backgroundImage = "url(images/background.png)";
+	
+	
+	//Initialise important game variables
+	lives = startingLives;
+	enemySpeed = enemyStartSpeed;
+	
+	catcherPositions = Array();
+	//Calculate coordinates for catcher positions
+	var positionDistance = (canvasWidth) / numberOfCatcherPositions;
+	var startPoint = 10;
+	for(var i = 0; i < numberOfCatcherPositions; i++){
+		catcherPositions.push(startPoint);
+		startPoint += positionDistance;
+	}
+	//Create enemies
+	enemies = Array();
+	for(var i = 0; i < numberOfEnemies; i++){
+		var enemy = new Object();
+		enemy.img = document.createElement('img');
+		enemy.img.src = "images/enemy.png";
+		enemy.img.style.position = "absolute";
+		enemy.img.width = (canvasWidth/numberOfCatcherPositions)-3;
+		canvas.appendChild(enemy.img);
+		enemy.xCoordinate = catcherPositions[Math.floor(Math.random()*numberOfCatcherPositions)];
+		enemy.yCoordinate = -enemy.img.height - Math.random() * maxEnemySpacing;
+		enemies.push(enemy);
+	}
+   	//Create bad egg
+	badegg = Array();
+	for(var i = 0; i < numberOfBadEgg; i++){
+		var bad = new Object();
+		bad.img = document.createElement('img');
+		bad.img.src = "images/badeggg.png";
+		bad.img.style.position = "absolute";
+		bad.img.width = (canvasWidth/numberOfCatcherPositions)-3;
+		canvas.appendChild(bad.img);
+		bad.xCoordinate = catcherPositions[Math.floor(Math.random()*numberOfCatcherPositions)];
+		bad.yCoordinate = -bad.img.height - Math.random() * maxRottenSpacing;
+		badegg.push(bad);
+	}
+	xtra = Array();
+	for(var i = 0; i < numberOfXtra; i++){
+		var xlife = new Object();
+		xlife.img = document.createElement('img');
+		xlife.img.src = "images/xtrap.png";
+		xlife.img.style.position = "absolute";
+		xlife.img.width =(canvasWidth/numberOfCatcherPositions)-3;
+        canvas.appendChild(xlife.img);
+		xlife.xCoordinate = catcherPositions[Math.floor(Math.random()*numberOfCatcherPositions)];
+		xlife.yCoordinate = -xlife.img.height - Math.random() * maxLifeSpacing * 2;
+		xtra.push(xlife);
+	}
+	//Create catcher
+	catcher = new Object();
+	catcher.img = document.createElement('img');
+	catcher.img.src = "images/catcher.png";
+	catcher.img.style.position = "absolute";
+	canvas.appendChild(catcher.img);
+    catcher.img.width = (canvasWidth/numberOfCatcherPositions)-3;
+	catcher.yCoordinate = canvasHeight/1.2;
+	catcher.xCoordinate = catcherPositions[0];
+	catcher.position = 0;    
+
+
+	//Add a container for lives
+	lifeContainer = document.createElement("div");
+    lifeContainer.style.backgroundColor = "khaki";
+    lifeContainer.style.color="black";
+	lifeContainer.style.position = "absolute";
+    lifeContainer.style.bottom = "20px"; //Places it along the bottom edge of the game
+	lifeContainer.style.right = "30px"; //Places it on the right edge of the game
+	canvas.appendChild(lifeContainer);
+	
+	//Create container for displaying player score
+    scoreContainer = document.createElement("div");
+    scoreContainer.style.backgroundColor="gold";
+    scoreContainer.style.fontSize = 40;
+	scoreContainer.style.position = "absolute";
+	scoreContainer.style.bottom = "20px";
+	scoreContainer.style.left = "30px";
+	scoreContainer.style.color = "purple";
+    scoreContainer.innerHTML = "   "+tplayer+": 0  || "+oplayer+": 0   ";
+	canvas.appendChild(scoreContainer);
+	
+	//Add controller elements and listen for touches/clicks on them
+	var leftController = document.createElement('img');
+	var rightController = document.createElement('img');
+	leftController.src = "images/lefty.png";
+	rightController.src = "images/right.png";
+	
+    leftController.style.position = "absolute";
+	leftController.style.left = "5px";
+	leftController.style.bottom = canvasHeight/2-20 + 'px';  //Place controller image in middle of screen
+    leftController.width = (canvasWidth/3)-3;
+    rightController.width = (canvasWidth/3)-3;
+    rightController.style.position = "absolute";
+	rightController.style.right = "5px";
+	rightController.style.bottom = canvasHeight/2-20 + 'px'; //Place controller image in middle of screen
+	
+    canvas.appendChild(leftController);
+	canvas.appendChild(rightController);
+	
+	//Listen for events to handle controls
+	listenForEvent(canvas, "touchmove", handleSwipe);
+	listenForEvent(canvas, "touchstart", handleTouch);
+    
+	listenForEvent(leftController, "touchstart", moveLeft);
+	listenForEvent(leftController, "mousedown", moveLeft);
+    
+	listenForEvent(rightController, "touchstart", moveRight);
+	listenForEvent(rightController, "mousedown", moveRight);
+    
+	//If the window is resized (changed to landscape/portrait ) reset the game with new size
+	listenForEvent(window, "resize", resetGame);
+	//Start update and draw loops
+	update();
+	draw(); 
+}
+
+//Update method performs all maths calculations and movement for game objects
+var update = function(){
+	//Only update elements if we are actually playing
+	if(gameState == "ingame"){
+		catcher.xCoordinate = catcherPositions[catcher.position]; 
+		for(var i = 0; i < enemies.length; i++){
+			enemies[i].yCoordinate += enemySpeed;
+            if(isCollision(catcher, enemies[i])){
+				enemies[i].yCoordinate = -enemies[i].img.height - Math.random()*maxEnemySpacing;
+				enemies[i].xCoordinate = catcherPositions[Math.floor(Math.random()*numberOfCatcherPositions)];
+				increaseScore();
+				//Increase speed every 5 points the player gets
+				if(score >= speedIncreasePoints && score % speedIncreasePoints == 0){
+					enemySpeed += enemySpeedIncrease;
+				}
+			}
+			if(enemies[i].yCoordinate > canvasHeight){
+				removeLife();
+				//Reset enemy to random position at top of screen
+				enemies[i].yCoordinate = -enemies[i].img.height - Math.random()*maxEnemySpacing;
+				enemies[i].xCoordinate = catcherPositions[Math.floor(Math.random()*3)];
+			}
+		}
+        
+        //for badegg
+        for(var i = 0; i < badegg.length; i++){
+			badegg[i].yCoordinate += enemySpeed;
+			if(isCollision(catcher, badegg[i])){
+				badegg[i].yCoordinate = -badegg[i].img.height - Math.random()*maxRottenSpacing;
+				badegg[i].xCoordinate = catcherPositions[Math.floor(Math.random()*numberOfCatcherPositions)];
+				removeLife();
+						}
+			if(badegg[i].yCoordinate > canvasHeight){
+				//Reset badegg to random position at top of screen
+				badegg[i].yCoordinate = -badegg[i].img.height - Math.random()*maxRottenSpacing;
+				badegg[i].xCoordinate = catcherPositions[Math.floor(Math.random()*3)];
+			}
+		}
+        
+      //xtra life
+      	for(var i = 0; i < xtra.length; i++){
+			xtra[i].yCoordinate += enemySpeed;
+			if(isCollision(catcher, xtra[i])){
+				xtra[i].yCoordinate = -xtra[i].img.height - Math.random() * maxLifeSpacing*2;
+				xtra[i].xCoordinate = catcherPositions[Math.floor(Math.random()*numberOfCatcherPositions)];
+				addLife();
+			}
+			if(xtra[i].yCoordinate > canvasHeight){
+				//Reset xlife to random position at top of screen
+				xtra[i].yCoordinate = -xtra[i].img.height - Math.random()*maxLifeSpacing*2;
+				xtra[i].xCoordinate = catcherPositions[Math.floor(Math.random()*3)];
+			}
+		}
+		updateTimeout = setTimeout(update, 1000/frameRate);
+        if(mystat == "1"){
+        scvalue = "p2score";
+        try{
+        console.log(mystat);
+        console.log(scvalue);
+        froom.child("p2score").on('value', function(snapshot){
+        score2 = snapshot.val();
+        console.log("mystat "+mystat+" score2"+score2);
+        printScore();
+        });
+        }catch(err){
+        console.log(err);
+        }
+        }else if(mystat == "2"){
+        scvalue = "p1score";
+        try{
+         console.log(mystat);
+         console.log(scvalue);
+        froom.child("p1score").on('value', function(snapshot){
+        score2 = snapshot.val();
+        console.log("mystat "+mystat+" score2"+score2);
+        printScore();
+        });
+    }catch(err){
+    console.log(err);
+    }
+    }
+	}
+}
+var audio = new Audio('images/circus.mp3');
+//Places all elements appropriately on the screen
+var draw = function(){
+	if(gameState == "controls"){
+		canvas.innerHTML = "<h2>PRESS START TO PLAY</h2>"
+			+"<button ontouchstart='startGame()' onclick='startGame()' style='width:"+canvasWidth/5+"px'>START</button>"
+        +"<button ontouchstart='index()' onclick='index()'>BACK TO MENU</button><br/><br/>";
+            +"<h3>Controls:</h3>"
+			+"<p>Touch <img src='images/lefty.png' height='"+canvasHeight/12 + "px'/><img src='images/right.png'                                             height='"+canvasHeight/12+"px'/>to control basket</p>"
+            +"<p>AVOID <img src='images/badeggg.png' height='"+canvasHeight/12 + "px'/>not to lose score</p>"
+            +"<p>CATCH <img src='images/enemy.png' height='"+canvasHeight/12 + "px'/>to get score</p>"
+            +"<p>CATCH <img src='images/xtrap.png' height='"+canvasHeight/12 + "px'/>to get extra 5 points</p>";
+	}else if(gameState == "ingame"){
+        audio.play();
+		// Draw elements to canvas
+		for(var i = 0; i < enemies.length; i++){
+			enemies[i].img.style.left = enemies[i].xCoordinate + 'px';
+			enemies[i].img.style.top = enemies[i].yCoordinate + 'px';
+		}
+        for(var i = 0; i < badegg.length; i++){
+			badegg[i].img.style.left = badegg[i].xCoordinate + 'px';
+			badegg[i].img.style.top = badegg[i].yCoordinate + 'px';
+		}
+        for(var i = 0; i < xtra.length; i++){
+			xtra[i].img.style.left = xtra[i].xCoordinate + 'px';
+			xtra[i].img.style.top = xtra[i].yCoordinate + 'px';
+		}
+      	catcher.img.style.left = catcher.xCoordinate + 'px';
+		catcher.img.style.top = catcher.yCoordinate + 'px';
+  
+        //Run this function again in a few milliseconds
+		drawTimeout = setTimeout(draw, 1000/frameRate);
+	}else if(gameState == "gameover"){
+        froom.on('value', function(snapshot){
+        var pdone;
+        var odone;
+        //checking player stan
+        if(mystat == "1"){
+        pdone = snapshot.child("p1status").val();
+        odone = snapshot.child("p2status").val();
+        console.log("mystat "+mystat);
+        score2=snapshot.child("p2score").val();
+        }else if(mystat == "2"){
+        console.log("mystat "+mystat);
+        pdone = snapshot.child("p2status").val();
+        odone = snapshot.child("p1status").val();
+        score2=snapshot.child("p1score").val();
+        }
+        //checking if other player status is done
+        if(pdone == "over" && odone =="over"){
+        var winlose;
+        if(score>score2){
+        winlose = "YOU WIN";
+        }else if(score<score2){
+        winlose = "YOU LOSE";
+        }else if(score = score2){
+        winlose = "SCORE TIE";
+        }
+   		canvas.innerHTML = "<h1>Time is Over<br/>"+winlose+"<br/>"+pname+" Score: " + score 
+        + "<br/>"+pname2+" Score:"+score2+"<br>Push to restart:</h1>"
+		+"<button ontouchstart='resetGame()' onclick='resetGame()'>RESTART</button><br/><br/>"
+        +"<button ontouchstart='index()' onclick='index()'>BACK TO MENU</button><br/><br/>";
+        }else if(odone == "play" && pdone == "over"){
+        canvas.innerHTML = "<h1>Time is Over<br/>Calculating score...</h1>";
+        }
+	});
+    }
+}
+//Checks for collisions between 2 game objects
+var isCollision = function(object1, object2){
+	if(
+		object1.xCoordinate > (object2.xCoordinate + object2.img.width)  ||
+		object1.yCoordinate > (object2.yCoordinate + object2.img.height) ||
+		(object1.xCoordinate + object1.img.width) < object2.xCoordinate  ||
+		(object1.yCoordinate + object1.img.height) < object2.yCoordinate
+	)
+		return false;
+	else
+		return true;
+}
+
+//Resets score to 0
+var increaseScore = function(){
+	score++;
+    printScore();
+}
+
+var printScore = function(){
+    if (mystat == "1" && gameState != "gameover"){
+    froom.child("p1score").set(score);
+    }else if(mystat == "2" && gameState != "gameover"){
+    froom.child("p2score").set(score);
+    }
+    scoreContainer.innerHTML = tplayer+":"+score+"  ||  "+oplayer+":"+score2;
+}
+
+var removeLife = function(){
+	if(score>0){score--;}
+    else if(score<0){
+    score =0;
+    }
+    printScore();
+}
+
+var addLife = function(){
+    score = score+5;
+	//Update in the lives element
+	printScore();
+}
+
+var moveLeft = function(event){
+	event.preventDefault();
+	if(catcher.position > 0){
+		catcher.position -= 1;
+	}
+}
+var moveRight = function(event){
+	event.preventDefault();
+	if(catcher.position < numberOfCatcherPositions-1){
+		catcher.position += 1;
+	}
+}
+
+var startGame = function(){
+	//check player stans
+    console.log("start game: "+mystat);
+    if(mystat == "1"){
+    console.log("set p1status: ready + "+mystat);
+    froom.child("p1status").set("ready");
+    }else if(mystat == "2"){
+    console.log("set p2status: ready + "+mystat);
+    froom.child("p2status").set("ready");
+    }else{
+    alert("error: no_player_stat");
+    }
+    console.log("waiting");
+    //check and update both player stans before in game
+        try{
+        froom.on('value', function(snapshot){
+        var p11 = snapshot.child('p1status').val();
+        var p22 = snapshot.child('p2status').val();
+        console.log("changed "+p11+" and "+p22);
+        var pp;
+        var op;
+        if(mystat == "1"){
+        pp = p11;
+        op = p22;
+        }else if(mystat == "2"){
+        pp=p22;
+        op=p11;
+        }
+        if(pp=="ready" && op=="in" || pp=="ready" && op==""){
+        canvas.innerHTML = "<h2>YOU ARE READY<BR>WAITING FOR OTHER PLAYER TO START</h2>"
+        +"<button ontouchstart='index()' onclick='index()'>BACK TO MENU</button><br/><br/>";;
+        }else if(op == "ready" && pp == "ready"){
+            console.log(p11 + p22);
+            froom.child("p1status").set("play");
+            froom.child("p2status").set("play");
+            if(mystat == "1"){
+            pname2 = snapshot.child('p2name').val();
+            }else if(mystat == "2"){
+            pname2 = snapshot.child('p1name').val();
+            }oplayer = oplayer+"("+pname2+")";
+            console.log("game start");
+        gameState = "ingame";
+	   initialise();
+       timerId = setInterval(countdown, 1000);
+//        froom.off('value');
+        }
+        });
+    }catch(err){
+    console.log(err);
+    }
+}
+var countdown = function(){
+if(time == -1){
+        clearTimeout(timerId);
+        if(mystat == "1"){
+        console.log("set p1status: over + "+mystat);
+        froom.child("p1status").set("over");
+        }else if(mystat == "2"){
+        console.log("set p2status: over + "+mystat);
+        froom.child("p2status").set("over");
+        }else{
+        alert("error: no_player_stat");
+        }
+        gameState="gameover";
+        initialise();
+      }else{
+        lifeContainer.innerHTML = time;
+        if(time<6){
+        lifeContainer.style.backgroundColor = "red";
+        lifeContainer.style.color="white";
+        lifeContainer.style.fontWeight="bold";
+        }
+          console.log(time)
+        time--;
+      }
+}
+
+var resetGame = function(){
+    var clean = false;
+    if(mystat == "1"){
+    froom.child("p1name").set("");
+    froom.child("p1score").set("");
+    froom.child("p1status").set("");
+    clean = true;
+    }
+    else if (mystat == "2"){
+    froom.child("p2name").set("");
+    froom.child("p2score").set("");
+    froom.child("p2status").set("");
+    
+    clean = true;
+    }
+    if(clean = true){
+    var rst;
+    froom.once('value').then(function(snapshot){
+    rst = parseInt(snapshot.child("roomStat").val());
+    rst--;
+    froom.child("roomStat").set(rst);
+//    time = snapshot.child("timeset").val();
+//    score=0;
+//    score2=0;
+//    });
+//    gameState = "controls";
+//	initialise();
+    location.reload();
+    });
+    }else{
+    alert("not clean yet");
+    }
+}
+var index = function(){
+    var roomstat; 
+    froom.once('value').then(function(snapshot){
+    roomstat = parseInt(snapshot.child("roomStat").val());
+//    alert(roomstat+"dapet");
+    if(mystat == "1"){
+    froom.child("p1name").set("");
+    froom.child("p1score").set("");
+    froom.child("p1status").set("");    
+    }
+    else if (mystat == "2"){
+    froom.child("p2name").set("");
+    froom.child("p2score").set("");
+    froom.child("p2status").set("");
+    }
+    roomstat--;
+//    alert(roomstat+" minus");
+    if(roomstat==0 || roomstat == null || roomstat == ""){
+        froom.off('value');
+        froom.remove();
+    }else if(roomstat = 1){    
+        froom.child("roomStat").set(roomstat);
+    }else{
+    alert(roomstat+" end")
+    }
+    });
+	window.location.href = "index.html";
+}
+var handleTouch = function(event){
+	event.preventDefault();
+}
+//This stops the browser from scrolling when you
+//swipe around
+var handleSwipe = function(event){
+	event.preventDefault();
+}
+listenForEvent = function (element, event, callback) {
+   //Regular style
+		if (element.addEventListener) {
+       element.addEventListener(event, callback, false);
+   }else 
+		//IE Style
+		if (element.attachEvent) {
+       element.attachEvent('on' + event, callback);
+   } 
+		//Legacy IE Style
+		else {
+       element['on' + event] = callback;
+   }
+};
+	</script>
+<!--end js-->
+		<style type="text/css">
+	html, body{
+		margin : 0;
+		padding : 0;
+	}
+	#main{
+		margin : auto;
+		padding : 0;
+		overflow : hidden;
+		position : relative !important;
+		margin : auto;
+		text-align : center;
+	}
+	*{
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+		user-select: none;
+		cursor : default;
+	}
+	</style>
+</head>
+<body onsubmit="false">
+	<div id="main" onsubmit="false">
+	</div>
+       
+</body>
+</html>

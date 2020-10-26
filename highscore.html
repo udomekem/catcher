@@ -1,0 +1,166 @@
+<html>
+<head>
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+<title>Catcher </title>
+<style type="text/css">
+	html, body{
+		margin : 0;
+		padding : 0;
+	}
+	#canvas{
+		margin : auto;
+		padding : 0;
+/*		overflow : hidden;*/
+		position : relative !important;
+		margin : auto;
+		text-align : center;
+	}
+	*{
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+		user-select: none;
+		cursor : default;
+	}
+	</style>
+</head>
+<body>
+    <div id='canvas' height="100%" width="100%">
+    <form>
+        <h1 align="center">HIGHSCORES</h1>
+        <br><h1  align="center">SINGLE PLAYER HIGHSCORE</h3>
+      <table style="width:100%"  id="singletable">
+  <tr>
+    <th>RANK</th>
+    <th>NAME</th>
+    <th>SCORE</th>
+  </tr>
+</table>
+        
+ <h1  align="center">MULTIPLAYER TEAM HIGHSCORE</h3>
+<table style="width:100%"  id="mttable">
+  <tr>
+    <th>RANK</th>
+    <th>NAME</th>
+    <th>SCORE</th>
+  </tr>
+</table>
+<br><br><br>
+        <div style="margin: auto">
+        <button  margin="auto" style='height:50px;width:100;margin:auto' align="center"id="btnback">MENU</button>
+        </div>
+    </form>
+    </div>
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-database.js"></script>
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+<script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-analytics.js"></script>
+<script>
+  // Your web app's Firebase configuration
+  var firebaseConfig = {
+    apiKey: "AIzaSyD-7IUeYHo8fk5xUMjTzJWnTUeTSrcyBZQ",
+    authDomain: "java0101-ardy.firebaseapp.com",
+    databaseURL: "https://java0101-ardy.firebaseio.com",
+    projectId: "java0101-ardy",
+    storageBucket: "java0101-ardy.appspot.com",
+    messagingSenderId: "651141459911",
+    appId: "1:651141459911:web:f321cdc4d04328b2d133e2",
+    measurementId: "G-TSR2HXCHST"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  firebase.analytics();
+    //inserting script
+</script>
+    <script>
+        var canvasWidth; //browser 270; samsung a50 405 ; iphone 395
+var canvasHeight; //browser 420; samsung a50 750 ; iphone 630
+    const fbase = firebase.database();
+    canvas = document.getElementById("canvas");
+	canvas.style.backgroundImage = "url(images/background.png)";
+    var audio = new Audio('images/play.mp3');
+    audio.play();
+          audio.loop = true;
+    if(screen.width>screen.height){
+    //browser
+        alert("laptop");
+    canvasWidth = screen.width/3.5; 
+    canvasHeight = screen.height/1.20;
+canvas.style.width = canvasWidth + 'px';
+	canvas.style.height = canvasHeight + 'px';
+	
+    }else if(screen.width<screen.height){
+    //mobile
+    canvas.style.width = '100%';
+	canvas.style.height = '100%';
+	
+        alert("mobile");
+//    canvasWidth = screen.width; 
+//    canvasHeight = screen.height*1.2;
+}
+    
+        
+    btnback.addEventListener('click', (e) =>{
+    e.preventDefault();      
+    window.location.href = "index.html";
+    });  
+    
+        //retrieve data
+    var ref = fbase.ref("highscore");
+    ref.on('value', gotData, errData);
+   
+    var table = [document.getElementById('singletable'), document.getElementById('mttable'), document.getElementById('mstable')];  
+    var tableNum;
+   
+    function gotData(data){
+    console.log('jackpot SAY!');
+    var highscore = data.val();
+    var scoreType = Object.keys(highscore);
+    console.log(highscore);
+        for(var j = 0; j<scoreType.length; j++){
+        var st;
+        var npath = fbase.ref("highscore/"+scoreType[j]);
+        npath.on('value', function(snapshot){st = snapshot.val();});
+        console.log(st)
+        var rank = Object.keys(st);
+        console.log(rank)
+        if(scoreType[j] == 'mthigh'){tableNum = 1;}
+        else if(scoreType[j] == 'shigh'){tableNum = 0;}
+            for(var i = 0; i<rank.length;i++){
+                var r = rank[i];
+                if(scoreType[j] == 'shigh'){
+                var name1 = data.child(scoreType[j]+"/"+r+"/pname").val();
+                }else if(scoreType[j] == 'mthigh'){
+                var name1 = data.child(scoreType[j]+"/"+r+"/pname1").val()+" & "
+                +data.child(scoreType[j]+"/"+r+"/pname2").val();
+                }
+                console.log(name1);
+                var scores = data.child(scoreType[j]+"/"+r+"/hs").val();
+                console.log(scores);
+                var row = table[tableNum].insertRow(i+1);
+                var cell1 = row.insertCell(0);
+                cell1.innerHTML = r;
+                cell1.style='text-align:center;height:50px';
+                var cell2 = row.insertCell(1);
+                cell2.innerHTML = name1;
+                cell2.style='text-align:center;height:50px';
+                var cell3 = row.insertCell(2);
+                cell3.innerHTML = scores;
+                cell3.style='text-align:center;height:50px';
+            }
+        }
+    }
+    function errData(data){
+     console.log('ERROR SAY!');
+    console.log(data);
+    }
+    </script>
+    
+</body>
+</html>

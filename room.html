@@ -1,0 +1,282 @@
+<html>
+<head>
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+<title>EggCatcher Game</title>
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-database.js"></script>
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+<script src="https://www.gstatic.com/firebasejs/7.19.1/firebase-analytics.js"></script>
+<script>
+  // Your web app's Firebase configuration
+  var firebaseConfig = {
+    apiKey: "AIzaSyD-7IUeYHo8fk5xUMjTzJWnTUeTSrcyBZQ",
+    authDomain: "java0101-ardy.firebaseapp.com",
+    databaseURL: "https://java0101-ardy.firebaseio.com",
+    projectId: "java0101-ardy",
+    storageBucket: "java0101-ardy.appspot.com",
+    messagingSenderId: "651141459911",
+    appId: "1:651141459911:web:f321cdc4d04328b2d133e2",
+    measurementId: "G-TSR2HXCHST"
+  };
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  firebase.analytics();
+    //inserting script
+</script>
+    <style type="text/css">
+	html, body{
+		margin : 0;
+		padding : 0;
+	}
+	#main{
+		margin : auto;
+		padding : 0;
+		overflow : hidden;
+		position : relative !important;
+		margin : auto;
+		text-align : center;
+	}
+	*{
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+		user-select: none;
+		cursor : default;
+	}
+	</style>
+</head>
+<body style="background-color:Yellow;">
+<main>
+    <form id ="main" style="text-align:center" height="100%" idth="100%" onsubmit="return false">
+        <h1 align="center">ROOM</h1>
+        <br>
+        <button style='height:50px;width:100%' align="left" onclick="makeRoom()" id="btnadd"><h2>CREATE ROOM</h2></button>
+        <button style='height:50px;width:100%' align="center" onclick="getRoom()"><h2>JOIN ROOM</h2></button>
+        <button style='height:50px;width:100%' align="right" id="btnback"><h2>MENU</h2></button>
+        <table style="width:100%">
+        <thead>
+        <th><h2>NO</h2></th>
+        <th><h2>ROOM NAME</h2></th>
+        <th><h2>CLICK TO JOIN</h2></th>
+        </thead>
+        </table>
+        <table style="width:100%"  id="roomList">
+        </thead>
+        </table>
+    </form>
+</main>    
+</body>
+ <script>
+     var canvasWidth; //browser 270; samsung a50 405 ; iphone 395
+var canvasHeight; //browser 420; samsung a50 750 ; iphone 630
+    var timeset;
+    var canvas = document.getElementById("main");
+    canvas.style.backgroundImage = "url(images/background.png)";
+   if(screen.width>screen.height){
+    //browser
+    canvasWidth = screen.width/3.5; 
+    canvasHeight = screen.height/1.20;
+       canvas.style.width = canvasWidth + 'px';
+	canvas.style.height = canvasHeight + 'px';
+	
+    }else if(screen.width<screen.height){
+    //mobile
+         canvas.style.width = '100%';
+	canvas.style.height = '100%';
+//    canvasWidth = screen.width; 
+//    canvasHeight = screen.height*1.2;
+    }
+     
+     
+    const fbase = firebase.database();
+    fbase.ref('room').on('value', gotData, errData);
+        var tableRoom =  document.getElementById('roomList')
+var makeRoom = function(){  
+   //   e.preventDefault();
+    console.log('1.makeroom start');
+    var roomName = prompt("Please create the room name:");
+    //input room name
+    isNull("ROOM NAME", roomName)
+    //check if name exist
+    console.log('1.makeroom end');
+
+        console.log('--------------------------------------------------');
+}
+
+var isNull = function(input, a){
+    console.log('2.isnull start');
+    if (a == "") {
+    console.log('2.1 isnull empty string');
+      nullInput(input);
+        return;
+    }else if(a == null){
+        console.log('2.2 isnull null');
+    alert("canceled");
+    return;
+    }else if(input == "ROOM NAME"){
+        console.log('2.3 isnull roomname');
+    checkNameExist(a);
+    return;
+    }
+    console.log('2.isnull end');
+}
+
+function checkNameExist(name){
+//    window.alert("checkname")
+    console.log('4.chechnameexist start');
+    try{
+    fbase.ref("room").once('value').then(function(snapshot){
+        var a = snapshot.child(name).exists(); // true
+        isExist(a,name);
+        return;
+    });}catch(err){
+    console.log(err);
+    }
+    console.log('4.chechnameexist  end');
+//    window.alert("check kelar")
+}
+     
+function isExist(a, name){
+ console.log('5 isexist start');
+    try{
+    if (a) {
+        console.log('5.1 isexist roomname exist');
+          alert("Room name already existed, please enter other name");
+            var rname = prompt("Please create the room name:");
+            isNull("ROOM NAME",rname);
+         //   checkNameExist(rname);
+            return;
+        } else {
+            console.log('5.2 isexist create password');
+            var roomPass = prompt("Please create the room PASSWORD:");
+            isNull("ROOM PASSWORD",roomPass);
+            timeset = prompt("Please set time limit in seconds (default input will be 30 secs):");
+            if(timeset == "" || timeset == null){
+            console.log(timeset+" not integer, timeset default")
+            timeset = 30;
+            }else if(0>timeset > 600 ||isNaN(timeset)){
+            timeset = 30;
+            }
+        fbase.ref('room').child(name).set({
+        rpass:roomPass,
+        p2status:"",
+        p2score:"",
+        p2name:"",
+        p1status:"",
+        p1score:"",
+        p1name:"",
+        roomStat:"",
+        timeset:timeset
+    });     
+     waitingRoom();
+     return;
+    }}catch(err){
+    console.log(err);
+    }console.log('5.isexist end');
+}
+var nullInput = function(input){
+    console.log('3 nullinput start');
+        if(input == "ROOM NAME"){
+        console.log('3.1 nullinput name');
+            var nname = prompt("Please create the "+ input);
+        isNull(input, nname);
+        }
+        else if(input == "ROOM PASSWORD"){
+            console.log('3.2 nullinput password');
+        var rPass = prompt("Please create the "+ input);
+        isNull(input, rPass);
+        }
+    console.log('3. nullinput end');
+}
+
+
+var waitingRoom = function(){
+console.log("6. waiting room now");
+}
+    
+    btnback.addEventListener('click', (e) =>{
+    e.preventDefault();      
+    window.location.href = "index.html";
+    });  
+     
+function clearTable(){
+    var tableRoomRows = tableRoom.rows;
+   // var rorow = tableRoomRows.length+1;
+    console.log(tableRoomRows)
+  while(tableRoomRows.length>0){
+        try{
+        tableRoom.deleteRow(0);
+        }catch(err){console.log(err)}
+  }
+}   
+function gotData(data){
+    console.log('1. GET ROOM LIST');
+    clearTable();
+    var rooms = data.val();
+    var roomN = Object.keys(rooms);
+   
+        for(var j = 0; j<roomN.length; j++){            
+            var r = roomN[j];
+            var row = tableRoom.insertRow(j);
+            var cell1 = row.insertCell(0);
+            cell1.innerHTML = j+1;
+            cell1.style='text-align:center;height:50px';
+            var cell2 = row.insertCell(1);
+            cell2.innerHTML = r;
+            cell2.style='text-align:center;height:50px';
+            var cell3 = row.insertCell(2);
+            cell3.innerHTML = "<button style='height:50px;width:100' ontouchstart='inputPass(this.id)' onclick='inputPass(this.id)' id="+r+">JOIN</button>";
+            cell3.style='text-align:center';
+            }
+    }
+function errData(data){
+     console.log('ERROR SAY!');
+    console.log(data);
+    }
+function getRoom(){
+    var rn = prompt("Please enter the room name:");
+    if(rn == ""){
+    alert("Room name cannot be emtpy!");
+    }else if (rn == null){
+    alert("Canceled");
+    }else{
+    fbase.ref("room/"+rn).once('value').then(function(snapshot){inputPass(rn);});
+    }         
+}
+         var audio = new Audio('images/play.mp3');
+    audio.play();
+     audio.loop = true;
+    function inputPass(r){
+    var rp = prompt("Please enter the room password:");
+      try{
+        fbase.ref("room/"+r).once('value').then(function(snapshot){
+        var isSame = snapshot.child('rpass').val(); // true
+        var playcount = snapshot.child('roomStat').val();
+        console.log(isSame);
+        if(isSame == rp){
+            if(playcount == "2"){
+            alert("room is full");
+            }else if(playcount == "" || playcount == null || playcount == 1){
+            movePage(r);
+            }else{
+            alert("error");
+            }
+            
+        }else{
+        alert("wrong pass");
+        }
+        });}catch(err){
+            console.log(err);
+        }
+    }
+    function movePage(r) {
+        document.location.href = 'timelimit.html?name=' + encodeURIComponent(r);
+}
+    </script>
+</html>
